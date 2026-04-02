@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dream11 AI (100 Teams Tool)</title>
+
+<style>
+body{font-family:Arial;background:#0b0b0b;color:#fff;padding:15px}
+input,select{width:100%;padding:10px;margin:5px 0;border-radius:6px;border:none}
+button{padding:12px;width:100%;margin-top:10px;background:#00e5ff;color:black;border:none;border-radius:6px}
+.team{background:#1e1e1e;margin-top:10px;padding:10px;border-radius:8px}
+</style>
+</head>
+<body>
+
+<h2>🤖 Dream11 AI (100 Teams Final Tool)</h2>
+<p>Enter 24 players → Generate 100 teams → Download file</p>
+
+<div id="inputs"></div>
+
+<button onclick="generateTeams()">⚡ Generate 100 Teams</button>
+<button onclick="download100()">📤 Download 100 Teams</button>
+
+<div id="teams"></div>
+
+<script>
+// create 24 players input
+for(let i=0;i<24;i++){
+ document.getElementById("inputs").innerHTML +=
+ `<input id="p${i}" placeholder="Player ${i+1}">
+  <select id="r${i}">
+   <option value="bat">BAT</option>
+   <option value="bowl">BOWL</option>
+   <option value="ar">AR</option>
+   <option value="wk">WK</option>
+  </select>`;
+}
+
+// build players with AI scoring
+function buildPlayers(){
+ let arr=[];
+ for(let i=0;i<24;i++){
+  let name=document.getElementById("p"+i).value;
+  let role=document.getElementById("r"+i).value;
+  if(name==="") return null;
+
+  let form=Math.floor(Math.random()*10)+1;
+  let selection=Math.random()*100;
+
+  let score=(form*2)+(100-selection);
+
+  if(role==="ar") score+=20;
+  if(role==="wk") score+=10;
+
+  arr.push({name,role,score,form,selection});
+ }
+ return arr;
+}
+
+let saved100="";
+
+function generateTeams(){
+ let players=buildPlayers();
+ if(!players){alert("Fill all 24 players");return;}
+
+ let html="";
+ let text="";
+
+ for(let t=0;t<100;t++){
+
+  // rotation for equal distribution
+  let rotated=[...players.slice(t%24), ...players.slice(0,t%24)];
+
+  // slight variation
+  let modified=rotated.map(p=>({
+    ...p,
+    score: p.score + (Math.random()*10 - 5)
+  }));
+
+  let sorted=[...modified].sort((a,b)=>b.score-a.score);
+
+  let team=[];
+
+  // at least one of each role
+  let wk=sorted.find(p=>p.role==="wk");
+  let ar=sorted.find(p=>p.role==="ar");
+  let bat=sorted.find(p=>p.role==="bat");
+  let bowl=sorted.find(p=>p.role==="bowl");
+
+  if(wk) team.push(wk);
+  if(ar) team.push(ar);
+  if(bat) team.push(bat);
+  if(bowl) team.push(bowl);
+
+  let used=new Set(team.map(p=>p.name));
+
+  for(let p of sorted){
+    if(team.length>=11) break;
+    if(!used.has(p.name)){
+      team.push(p);
+      used.add(p.name);
+    }
+  }
+
+  // captain = highest form
+  let captain=team.sort((a,b)=>b.form-a.form)[0].name;
+
+  // vc = lowest selection (differential)
+  let vc=team.filter(p=>p.name!==captain)
+             .sort((a,b)=>a.selection-b.selection)[0].name;
+
+  let names=team.map(p=>p.name);
+
+  // 4 backups
+  let backup=[];
+  for(let p of sorted){
+    if(backup.length>=4) break;
+    if(!names.includes(p.name)) backup.push(p.name);
+  }
+
+  html+=`<div class="team">
+  <b>Team ${t+1}</b><br>
+  ${names.join(", ")}<br>
+  ⭐ C: ${captain} | 🔥 VC: ${vc}<br>
+  🧩 Backup: ${backup.join(", ")}
+  </div>`;
+
+  text+=`Team ${t+1}: ${names.join(", ")} | C:${captain} VC:${vc} | Backup:${backup.join(", ")}\n`;
+ }
+
+ saved100=text;
+ document.getElementById("teams").innerHTML=html;
+}
+
+function download100(){
+ if(!saved100){alert("Generate first");return;}
+ let blob=new Blob([saved100],{type:"text/plain"});
+ let a=document.createElement("a");
+ a.href=URL.createObjectURL(blob);
+ a.download="dream11_100_teams.txt";
+ a.click();
+}
+</script>
+
+</body>
+</html>
